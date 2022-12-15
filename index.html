@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digit Recognizer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.5.0/p5.js"
+        integrity="sha512-3WFaXQUsbGieECwv3t3DvyAkZ7pp+/rIKOQnx7NKhfwIF0u2l+DYsE2eF635ewJVj3YTU4/Ug6UqEkSTZCiSew=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.0.0/dist/tf.min.js"></script>
+</head>
+
+<body>
+    <div id="drawboard"> </div>
+    <button id="clear"> clear </button>
+    <button onclick="infer()"> Infer </button>
+    <canvas id="inputImage"></canvas>
+    <div id="result"></div>
+</body>
+<script src="sketch.js"></script>
+<script>
+    async function loadTFModel() {
+
+        let model;
+        await tf.loadLayersModel('./model.json')
+            .then(res => model = res);
+        if (!model) {
+            // let model = tf.sequential()
+            // model.add(tf.layers.dense({ units: 128, inputShape: [784], activation: 'relu' }));
+            // model.add(tf.layers.dense({ units: 10, activation: 'softmax' }))
+
+            // const optimizer = tf.train.adam();
+            // model.compile({
+            //     optimizer: optimizer,
+            //     loss: 'categoricalCrossentropy',
+            //     metrics: ['accuracy'],
+            // });
+            return "not happening";
+        }
+
+        return model;
+    }
+
+    let model;
+    loadTFModel()
+        .then(res => {
+            model = res;
+        });
+
+    function preProcess() {
+        let imgSource = document.getElementById("defaultCanvas0");
+        let originalImg = tf.browser.fromPixels(imgSource)
+        let scaled = tf.image.resizeNearestNeighbor(originalImg, [28, 28], true);
+        let resizedImg = scaled.mean(2).expandDims(2).expandDims();
+        // let inputImg = tf.split(resizedImg, 3)[0];
+        tf.browser.toPixels(resizedImg.div(255).squeeze(), document.getElementById("inputImage"))
+            .then(res => {
+                originalImg.dispose();
+                scaled.dispose();
+                resizedImg.dispose();
+            });
+
+        return resizedImg;
+    }
+
+    async function infer() {
+        let inputImage = preProcess();
+        let prediction = await model.predict(inputImage).data();
+        document.getElementById("result").innerHTML = `${prediction}\nNumber is : ${prediction.indexOf(Math.max(...prediction))}`;
+
+
+    }
+
+
+</script>
+
+</html>
